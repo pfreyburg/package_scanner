@@ -8,7 +8,7 @@ asked package. Finally it builds container from the Dockerfile and it also looks
 
 Script shows package version for each base image and for the Dockerfile. If the package is not present you see error from container's shell.
 
-It looks up for packages in two sources:
+It is possible to look up for packages in two sources:
 
 - `pip`
 - `rpm`
