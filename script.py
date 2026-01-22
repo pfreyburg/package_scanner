@@ -39,14 +39,18 @@ def run_image(client, image, source, package_name):
 def build_and_run_dockerfile(client, workdir, dockerfile, source, package_name):
     df_path = Path(workdir).resolve()
     relative_dockerfile = dockerfile.replace(REPO_WORKDIR+"/", "")
-    image_obj, _ = client.images.build(
-            path=str(df_path),
-            dockerfile=relative_dockerfile,
-            rm=True, 
-            tag="ps_temp_script_image:latest" 
-        )
-    r = run_image(client, image_obj.id, source, package_name)
-    client.images.remove(image=image_obj.id, force=True)
+    r = ""
+    try:
+        image_obj, _ = client.images.build(
+                path=str(df_path),
+                dockerfile=relative_dockerfile,
+                rm=True, 
+                tag="ps_temp_script_image:latest" 
+            )
+        r = run_image(client, image_obj.id, source, package_name)
+        client.images.remove(image=image_obj.id, force=True)
+    except docker.errors.BuildError as e:
+        print(e)
     return r
    
 def main():
