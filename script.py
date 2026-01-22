@@ -1,12 +1,13 @@
 """ Simple script which scans container images for packages and its version """
 
 from os import environ
+import random
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
-import docker
 from git import Repo, exc
 
 REPO_WORKDIR = environ.get("REPO_WORKDIR", ".workdir")
@@ -30,45 +31,53 @@ def scan_dockerfile(dockerfile):
 
     return images
 
-def run_image(client, image, source, package_name):
+def run_image(image, source, package_name):
     """
     Function runs image on client and gets the installed version for the package
     if it is installed
     """
-    command = ["-c", PYTHON_INTERPRETER + " -m pip freeze | grep " + package_name]
+    command = PYTHON_INTERPRETER + " -m pip freeze | grep " + package_name
 
     if source == "rpm":
-        command = ["-c", "rpm -qa | grep " + package_name]
+        command = "rpm -qa | grep " + package_name
+
     r = ""
+    cmd = [
+            "podman", "run", "--rm", 
+            "--entrypoint", "sh", 
+            image,
+            "-c", command
+        ]
     try:
-        container = client.containers.run(image, command, remove=True, entrypoint="sh")
-        r = container.decode('utf-8')
-    except docker.errors.ContainerError as e:
-        print(e)
-    except docker.errors.APIError as e:
-        print(e)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        r = result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(e.stderr)
     return r
 
-def build_and_run_dockerfile(client, workdir, dockerfile, source, package_name):
+def build_and_run_dockerfile(dockerfile, source, package_name):
     """
     Function builds Dockerfile and then runs it
     """
-    df_path = Path(workdir).resolve()
-    relative_dockerfile = dockerfile.replace(REPO_WORKDIR+"/", "")
     r = ""
+
+    tag = "ps_temp_script_image"+str(random.randint(1000, 9999))+":latest"
+    cmd = ["podman", "build", "-f", dockerfile, "-t", tag]
     try:
-        image_obj, _ = client.images.build(
-                path=str(df_path),
-                dockerfile=relative_dockerfile,
-                rm=True,
-                tag="ps_temp_script_image:latest"
-            )
-        r = run_image(client, image_obj.id, source, package_name)
-        client.images.remove(image=image_obj.id, force=True)
-    except docker.errors.BuildError as e:
-        print(e)
-    except docker.errors.APIError as e:
-        print(e)
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(e.stderr)
+        return r
+
+    r = run_image(tag, source, package_name)
+
+    cmd = ["podman", "rmi", tag]
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(e.stderr)
+        return r
+
     return r
 
 def main():
@@ -87,7 +96,6 @@ def main():
         sys.exit(1)
 
     package_name = sys.argv[3]
-    client = docker.from_env()
 
     try:
         Repo.clone_from(git_url, REPO_WORKDIR)
@@ -110,9 +118,9 @@ def main():
             images = scan_dockerfile(path)
             for image in images:
                 print(image+": ", end="")
-                print(run_image(client, image, source, package_name))
+                print(run_image(image, source, package_name))
             print("Dockerfile:")
-            print(build_and_run_dockerfile(client, REPO_WORKDIR, str(path), source, package_name))
+            print(build_and_run_dockerfile(str(path), source, package_name))
     finally:
         shutil.rmtree(REPO_WORKDIR)
 
