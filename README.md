@@ -35,7 +35,7 @@ For example:
 python script.py https://github.com/RedHatInsights/floorist-operator.git pip requests
 ```
 
-### Envinronmnent variables
+### Environment variables
 
 | variable name      | default value |
 | ------------------ | ------------- |
