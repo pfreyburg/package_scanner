@@ -24,10 +24,10 @@ def scan_dockerfile(dockerfile):
     return images
 
 def run_image(client, image, source, package_name):
-    command = ["-c", PYTHON_INTERPRETER + " -m pip freeze | grep "+package_name]
+    command = ["-c", PYTHON_INTERPRETER + " -m pip freeze | grep " + package_name]
 
     if source == "rpm":
-        command = ["-c", "rpm -qa | grep "+package_name]
+        command = ["-c", "rpm -qa | grep " + package_name]
    
     try:
         container = client.containers.run(image, command, remove=True, entrypoint="sh")

@@ -34,3 +34,10 @@ For example:
 ```
 python script.py https://github.com/RedHatInsights/floorist-operator.git pip requests
 ```
+
+### Envinronmnent variables
+
+| variable name      | default value |
+| ------------------ | ------------- |
+| REPO_WORKDIR       | .workdir      |
+| PYTHON_INTERPRETER | python3       |
