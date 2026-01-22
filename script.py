@@ -45,6 +45,8 @@ def run_image(client, image, source, package_name):
         r = container.decode('utf-8')
     except docker.errors.ContainerError as e:
         print(e)
+    except docker.errors.APIError as e:
+        print(e)
     return r
 
 def build_and_run_dockerfile(client, workdir, dockerfile, source, package_name):
@@ -64,6 +66,8 @@ def build_and_run_dockerfile(client, workdir, dockerfile, source, package_name):
         r = run_image(client, image_obj.id, source, package_name)
         client.images.remove(image=image_obj.id, force=True)
     except docker.errors.BuildError as e:
+        print(e)
+    except docker.errors.APIError as e:
         print(e)
     return r
 
@@ -95,6 +99,10 @@ def main():
         base_path = Path(REPO_WORKDIR)
 
         dockerfiles = list(base_path.rglob('Dockerfile'))
+
+        if len(dockerfiles) < 1:
+            print("there are no Dockerfiles in this repository")
+            sys.exit(1)
 
         for path in dockerfiles:
             print("- " + str(path))
