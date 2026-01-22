@@ -1,5 +1,5 @@
 # package_scanner
-Simple script which scans images for packages and its version
+Simple script which scans container images for packages and its version
 
 ## How it works
 
