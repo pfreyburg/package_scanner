@@ -32,56 +32,60 @@ def run_image(client, image, source, package_name):
     try:
         container = client.containers.run(image, command, remove=True, entrypoint="sh")
 
-        print(container.decode('utf-8'))
+        return container.decode('utf-8')
     except docker.errors.ContainerError as e:
         print(e)
 
-def build_and_run_dockerfile(client, dockerfile, source, package_name):
-    df_path = Path(REPO_WORKDIR).resolve()
-    relative_dockerfile = str(dockerfile).replace(REPO_WORKDIR+"/", "")
+def build_and_run_dockerfile(client, workdir, dockerfile, source, package_name):
+    df_path = Path(workdir).resolve()
+    relative_dockerfile = dockerfile.replace(REPO_WORKDIR+"/", "")
     image_obj, _ = client.images.build(
             path=str(df_path),
             dockerfile=relative_dockerfile,
             rm=True, 
             tag="ps_temp_script_image:latest" 
         )
-    run_image(client, image_obj.id, source, package_name)
+    r = run_image(client, image_obj.id, source, package_name)
     client.images.remove(image=image_obj.id, force=True)
+    return r
    
+def main():
+    if len(sys.argv) < 4:
+        print("missing required arguments")
+        sys.exit(1)
 
-if len(sys.argv) < 4:
-    print("missing required arguments")
-    sys.exit(1)
+    git_url = sys.argv[1]
+    source = sys.argv[2]
 
-git_url = sys.argv[1]
-source = sys.argv[2]
+    if source != "pip" and source != "rpm":
+        print("Package source "+source+" is not supported")
+        sys.exit(1)
 
-if source != "pip" and source != "rpm":
-    print("Package source "+source+" is not supported")
-    sys.exit(1)
+    package_name = sys.argv[3]
+    client = docker.from_env() 
 
-package_name = sys.argv[3]
-client = docker.from_env() 
+    try:
+        Repo.clone_from(git_url, REPO_WORKDIR)
+    except exc.GitCommandError as e:
+        print(e)
+        sys.exit(1)
 
-try:
-    Repo.clone_from(git_url, REPO_WORKDIR)
-except exc.GitCommandError as e:
-    print(e)
-    sys.exit(1)
+    try:
+        base_path = Path(REPO_WORKDIR) 
 
-try:
-    base_path = Path(REPO_WORKDIR) 
+        dockerfiles = list(base_path.rglob('Dockerfile'))
 
-    dockerfiles = list(base_path.rglob('Dockerfile'))
+        for path in dockerfiles:
+            print("- " + str(path))
+            print("Base image: ")
+            images = scan_dockerfile(path)
+            for image in images:
+                print(image+": ", end="")
+                print(run_image(client, image, source, package_name))
+            print("Dockerfile:")
+            print(build_and_run_dockerfile(client, REPO_WORKDIR, str(path), source, package_name))
+    finally:
+        shutil.rmtree(REPO_WORKDIR)
 
-    for path in dockerfiles:
-        print("- " + str(path))
-        print("Base image: ")
-        images = scan_dockerfile(path)
-        for image in images:
-            print(image+": ", end="")
-            run_image(client, image, source, package_name)
-        print("Dockerfile:")
-        build_and_run_dockerfile(client, path, source, package_name)
-finally:
-    shutil.rmtree(REPO_WORKDIR)
+if __name__ == '__main__':
+    main()

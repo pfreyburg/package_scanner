@@ -35,6 +35,14 @@ For example:
 python script.py https://github.com/RedHatInsights/floorist-operator.git pip requests
 ```
 
+### Tests
+
+Tests are stored under `tests` directory.
+
+```
+python -m unittest discover tests
+```
+
 ### Environment variables
 
 | variable name      | default value |
