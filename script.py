@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ Simple script which scans container images for packages and its version """
 
 from os import environ

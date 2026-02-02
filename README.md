@@ -17,22 +17,26 @@ Source is specified in the arguments of the script.
 
 ## How to use
 
-First you need to install pip requirements:
+First you need to install pip requirements. It is recommended to use virtual environment:
 
 ```
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+
+chmod +x script.py
 ```
 
 Then you can run the script:
 
 ```
-python script.py [repository name] [package source] [package]
+./script.py [repository name] [package source] [package]
 ```
 
 For example:
 
 ```
-python script.py https://github.com/RedHatInsights/floorist-operator.git pip requests
+./script.py https://github.com/RedHatInsights/floorist-operator.git pip requests
 ```
 
 ### Tests
